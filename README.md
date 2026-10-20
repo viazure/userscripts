@@ -6,7 +6,7 @@ viazure 的油猴脚本仓库，脚本可直接用 Violentmonkey 或 Tampermonke
 
 | 脚本 | 作用 |
 | --- | --- |
-| [NeoDB 豆瓣与 Bangumi 评分](scripts/neodb-external-ratings.user.js) | 在 NeoDB 条目页读取已关联的豆瓣、Bangumi 链接，显示评分和若干条短评 |
+| [NeoDB 豆瓣与 Bangumi 评分](scripts/neodb-external-ratings.user.js) | 在条目页左侧原生评分下显示已关联的豆瓣、Bangumi 评分；短评默认折叠 |
 
 ## 安装
 
@@ -18,7 +18,7 @@ https://github.com/viazure/userscripts/raw/main/scripts/neodb-external-ratings.u
 
 1. 安装 [Violentmonkey](https://violentmonkey.github.io/) 或 [Tampermonkey](https://www.tampermonkey.net/)。
 2. 用浏览器打开上面的 raw 链接。扩展会提示安装这个 `.user.js`。
-3. 确认脚本已启用，然后打开任意 NeoDB 条目页，例如一部电影、一季剧集、一本书或一个游戏。标题下方会出现「站外评分」。
+3. 确认脚本已启用，然后打开任意 NeoDB 条目页，例如一部电影、一季剧集、一本书或一个游戏。左侧原生评分（如 9.3 / 10）下方会出现「站外评分」。
 
 脚本的更新地址同样指向这份 raw 文件，扩展可以按自己的更新周期检查新版本。
 
@@ -28,10 +28,10 @@ https://github.com/viazure/userscripts/raw/main/scripts/neodb-external-ratings.u
 
 脚本只使用条目上已经关联的外部链接，不会拿标题去搜索猜测。
 
-- 豆瓣、Bangumi 各显示评分、评分人数；Bangumi 还有排名（接口有提供时）。
-- 能读到短评时，每站最多显示 3 条，正文会截断。
+- 豆瓣、Bangumi 各显示评分、评分人数；Bangumi 还有排名（接口有提供时）。站名本身链到原站。
+- 默认是紧凑视图：只显示分数和人数，短评折叠在「短评」里，点开才展开。能读到时每站最多 3 条，正文会截断。
 - 读取中、未关联、失败都会在对应位置说明。失败时仍保留「打开豆瓣」或「打开 Bangumi」。
-- 样式沿用 NeoDB 的 Pico 颜色变量，浅色和暗色下都可读，面板放在标题块内部，不改三栏结构。
+- 样式沿用 NeoDB 的 Pico 颜色变量，浅色和暗色下都可读。面板插在左侧栏原生评分块（`#item-metadata .rating`）正下方，不改三栏结构，也不写入标题旁的 `.site-list` 徽章。找不到原生评分时退到 `#item-metadata` 或封面下方，不会回到 `#item-title`。
 
 ## 数据来源和限制
 
