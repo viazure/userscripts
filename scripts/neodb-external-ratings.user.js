@@ -338,6 +338,7 @@
       'background:var(--pico-card-background-color,color-mix(in srgb,CanvasText 6%,Canvas));',
       'color:var(--pico-color,CanvasText);text-align:start;font-size:.875rem;line-height:1.45;}',
       '#neodb-ext-ratings *{box-sizing:border-box;}',
+      '#neodb-ext-ratings section{margin:0;}',
       '#neodb-ext-ratings .neodb-ext-head{display:flex;justify-content:space-between;margin-bottom:.35rem;}',
       '#neodb-ext-ratings .neodb-ext-label{font-size:.75rem;letter-spacing:.04em;color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
       '#neodb-ext-ratings .neodb-ext-card{padding:.5rem 0;border-top:1px solid var(--pico-muted-border-color,color-mix(in srgb,CanvasText 16%,transparent));}',
