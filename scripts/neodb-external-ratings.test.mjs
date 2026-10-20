@@ -95,7 +95,7 @@ test('parses Bangumi score and short comments', () => {
   assert.equal(api.parseBangumiSubject({ rating: { score: 0, total: 2 } }).emptyReason, '暂无评分');
 });
 
-test('renders scores, links and escaped comment text', () => {
+test('renders compact scores with comments collapsed by default', () => {
   const html = api.renderPanel({
     douban: {
       status: 'ok',
@@ -111,12 +111,117 @@ test('renders scores, links and escaped comment text', () => {
   });
   assert.match(html, /9\.7/);
   assert.match(html, /3,351,916|3351916/);
-  assert.match(html, /打开豆瓣/);
+  assert.match(html, /movie\.douban\.com\/subject\/1292052/);
   assert.match(html, /未关联/);
-  assert.equal(html.includes('<script>'), false);
+  assert.match(html, /<details class="neodb-ext-fold">/);
+  assert.equal(/<details[^>]*\sopen[\s>]/.test(html), false);
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&lt;肖申克&gt;/);
+  assert.equal(html.includes('<script>'), false);
+  assert.equal(html.includes('打开豆瓣'), false);
   assert.equal(api.safeUrl('javascript:alert(1)'), '');
+});
+
+test('error state still keeps an open-site link and message', () => {
+  const html = api.renderPanel({
+    douban: {
+      status: 'error',
+      url: 'https://movie.douban.com/subject/1292052/',
+      message: '暂时读不到豆瓣数据。',
+    },
+    bangumi: { status: 'missing' },
+  });
+  assert.match(html, /打开豆瓣/);
+  assert.match(html, /暂时读不到豆瓣数据/);
+  assert.equal(html.includes('neodb-ext-fold'), false);
+});
+
+function fakeNode(id, extras) {
+  return Object.assign({
+    id: id || '',
+    isConnected: true,
+    classList: { contains() { return false; } },
+    closest() { return null; },
+    previousElementSibling: null,
+    ownerDocument: null,
+  }, extras);
+}
+
+test('mounts after the native #item-metadata .rating, never into the title', () => {
+  const rating = fakeNode('rating');
+  const metadata = fakeNode('item-metadata');
+  const cover = fakeNode('item-cover');
+  const title = fakeNode('item-title');
+  const doc = {
+    getElementById(id) {
+      if (id === 'item-metadata') return metadata;
+      if (id === 'item-cover') return cover;
+      if (id === 'item-title') return title;
+      return null;
+    },
+    querySelector(sel) {
+      if (sel === '#item-metadata .rating') return rating;
+      return null;
+    },
+  };
+  const target = api.findMountTarget(doc);
+  assert.equal(target.node, rating);
+  assert.equal(target.where, 'afterend');
+  assert.equal(target.leftColumn, false);
+  assert.notEqual(target.node, title);
+});
+
+test('falls back to metadata, then cover; never uses #item-title', () => {
+  const metadata = fakeNode('item-metadata');
+  const cover = fakeNode('item-cover');
+  const title = fakeNode('item-title');
+  const metaOnly = {
+    getElementById(id) {
+      if (id === 'item-metadata') return metadata;
+      if (id === 'item-cover') return cover;
+      if (id === 'item-title') return title;
+      return null;
+    },
+    querySelector() { return null; },
+  };
+  const metaTarget = api.findMountTarget(metaOnly);
+  assert.equal(metaTarget.node, metadata);
+  assert.equal(metaTarget.where, 'beforeend');
+
+  const coverOnly = {
+    getElementById(id) {
+      if (id === 'item-cover') return cover;
+      if (id === 'item-title') return title;
+      return null;
+    },
+    querySelector() { return null; },
+  };
+  const coverTarget = api.findMountTarget(coverOnly);
+  assert.equal(coverTarget.node, cover);
+  assert.equal(coverTarget.where, 'afterend');
+  assert.equal(coverTarget.leftColumn, true);
+
+  const titleOnly = {
+    getElementById(id) {
+      if (id === 'item-title') return title;
+      return null;
+    },
+    querySelector() { return null; },
+  };
+  assert.equal(api.findMountTarget(titleOnly), null);
+});
+
+test('rejects a panel still sitting in the title area', () => {
+  const title = fakeNode('item-title');
+  const misplaced = fakeNode('neodb-ext-ratings', {
+    closest(sel) { return sel === '#item-title' ? title : null; },
+  });
+  assert.equal(api.panelIsWellPlaced(misplaced), false);
+
+  const well = fakeNode('neodb-ext-ratings', {
+    closest(sel) { return sel === '#item-metadata' ? fakeNode('item-metadata') : null; },
+  });
+  assert.equal(api.panelIsWellPlaced(well), true);
 });
 
 test('live Douban movie and Bangumi subject', { timeout: 30000 }, async () => {

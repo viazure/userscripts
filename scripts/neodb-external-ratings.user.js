@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         NeoDB 豆瓣与 Bangumi 评分
 // @namespace    https://github.com/viazure/userscripts
-// @version      0.1.0
-// @description  在 NeoDB 条目页显示已关联的豆瓣与 Bangumi 评分和短评，无需登录
+// @version      0.2.0
+// @description  在 NeoDB 条目页左侧原生评分下方显示已关联的豆瓣与 Bangumi 评分；短评默认折叠
 // @author       viazure
 // @license      MIT
 // @homepageURL  https://github.com/viazure/userscripts
@@ -44,7 +44,7 @@
 (function () {
   'use strict';
 
-  var UA = 'viazure-userscripts/0.1.0 (+https://github.com/viazure/userscripts)';
+  var UA = 'viazure-userscripts/0.2.0 (+https://github.com/viazure/userscripts)';
   var BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
   var ITEM_PATH = /^\/(movie|tv|book|game|music|album|podcast|performance)(\/|$)/;
   var COMMENT_LIMIT = 3;
@@ -280,25 +280,53 @@
     }).join('') + '</ul>';
   }
 
-  function renderCard(source) {
+  function sourceLabel(source) {
     var names = { douban: '豆瓣', bangumi: 'Bangumi' };
-    var name = names[source.key] || source.key;
+    return names[source.key] || source.key;
+  }
+
+  function renderName(source) {
+    var name = sourceLabel(source);
     var mark = '<i class="neodb-ext-mark ' + source.key + '" aria-hidden="true"></i>';
     var link = safeUrl(source.url);
+    if (link && source.status !== 'missing') {
+      return '<a class="neodb-ext-name" href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">' +
+        mark + escapeHtml(name) + '</a>';
+    }
+    return '<span class="neodb-ext-name">' + mark + escapeHtml(name) + '</span>';
+  }
+
+  function renderFold(source) {
+    var comments = source.comments;
+    if (!comments || !comments.length) return '';
     var commentsLink = safeUrl(source.commentsUrl || source.url);
-    var open = link
-      ? '<a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">打开' + escapeHtml(name) + '</a>'
+    var title = source.title ? '<div class="neodb-ext-title">' + escapeHtml(source.title) + '</div>' : '';
+    var more = commentsLink
+      ? '<div class="neodb-ext-more"><a href="' + escapeHtml(commentsLink) + '" target="_blank" rel="noopener noreferrer">更多短评</a></div>'
       : '';
-    var head = '<div class="neodb-ext-row"><span class="neodb-ext-name">' + mark + escapeHtml(name) + '</span>';
+    var note = source.commentsNote ? '<p class="neodb-ext-note">' + escapeHtml(source.commentsNote) + '</p>' : '';
+    return '<details class="neodb-ext-fold">' +
+      '<summary>短评 ' + comments.length + '</summary>' +
+      title + renderComments(comments) + note + more +
+      '</details>';
+  }
+
+  function renderCard(source) {
+    var name = sourceLabel(source);
+    var link = safeUrl(source.url);
+    var head = '<div class="neodb-ext-row">' + renderName(source);
 
     if (source.status === 'missing') {
       return '<section class="neodb-ext-card">' + head + '<span class="neodb-ext-meta">未关联</span></div></section>';
     }
     if (source.status === 'loading') {
       return '<section class="neodb-ext-card" aria-busy="true">' + head +
-        '<span class="neodb-ext-meta">正在读取…</span>' + open + '</div></section>';
+        '<span class="neodb-ext-meta">正在读取…</span></div></section>';
     }
     if (source.status === 'error') {
+      var open = link
+        ? '<a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">打开' + escapeHtml(name) + '</a>'
+        : '';
       return '<section class="neodb-ext-card">' + head + open + '</div>' +
         '<p class="neodb-ext-note">' + escapeHtml(source.message || '暂时没有读到数据。') + '</p></section>';
     }
@@ -307,16 +335,10 @@
       ? '<span class="neodb-ext-meta">' + escapeHtml(source.emptyReason || '暂无评分') + '</span>'
       : '<span class="neodb-ext-score">' + escapeHtml(formatScore(source.score)) + '</span>' +
         '<span class="neodb-ext-meta">/ ' + escapeHtml(source.max || 10) + '</span>';
-    var count = source.count == null ? '' : '<span class="neodb-ext-meta">' + escapeHtml(formatCount(source.count)) + ' 人评分</span>';
-    var rank = source.rank && source.rank > 0 ? '<span class="neodb-ext-meta">排名 ' + escapeHtml(formatCount(source.rank)) + '</span>' : '';
-    var title = source.title ? '<div class="neodb-ext-title">' + escapeHtml(source.title) + '</div>' : '';
-    var more = commentsLink
-      ? '<a href="' + escapeHtml(commentsLink) + '" target="_blank" rel="noopener noreferrer">更多短评</a>'
-      : '';
-    var note = source.commentsNote ? '<p class="neodb-ext-note">' + escapeHtml(source.commentsNote) + '</p>' : '';
-    return '<section class="neodb-ext-card">' + head + score + count + rank + open + '</div>' +
-      title + renderComments(source.comments) + note +
-      (more ? '<div class="neodb-ext-more">' + more + '</div>' : '') +
+    var count = source.count == null ? '' : '<span class="neodb-ext-meta">' + escapeHtml(formatCount(source.count)) + ' 人</span>';
+    var rank = source.rank && source.rank > 0 ? '<span class="neodb-ext-meta">#' + escapeHtml(formatCount(source.rank)) + '</span>' : '';
+    return '<section class="neodb-ext-card">' + head + score + count + rank + '</div>' +
+      renderFold(source) +
       '</section>';
   }
 
@@ -332,33 +354,60 @@
 
   function panelCss() {
     return [
-      '#neodb-ext-ratings{box-sizing:border-box;width:100%;margin-top:.85rem;padding:.7rem .8rem .5rem;order:1;',
+      '#neodb-ext-ratings{box-sizing:border-box;max-width:100%;margin:.15rem 0 .7rem;padding:.4rem .55rem .3rem;',
       'border:1px solid var(--pico-muted-border-color,color-mix(in srgb,CanvasText 22%,transparent));',
       'border-radius:var(--pico-border-radius,.5rem);',
       'background:var(--pico-card-background-color,color-mix(in srgb,CanvasText 6%,Canvas));',
-      'color:var(--pico-color,CanvasText);text-align:start;font-size:.875rem;line-height:1.45;}',
+      'color:var(--pico-color,CanvasText);text-align:start;font-size:.8125rem;line-height:1.35;}',
       '#neodb-ext-ratings *{box-sizing:border-box;}',
-      '#neodb-ext-ratings section{margin:0;}',
-      '#neodb-ext-ratings .neodb-ext-head{display:flex;justify-content:space-between;margin-bottom:.35rem;}',
-      '#neodb-ext-ratings .neodb-ext-label{font-size:.75rem;letter-spacing:.04em;color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
-      '#neodb-ext-ratings .neodb-ext-card{padding:.5rem 0;border-top:1px solid var(--pico-muted-border-color,color-mix(in srgb,CanvasText 16%,transparent));}',
-      '#neodb-ext-ratings .neodb-ext-card:first-of-type{border-top:0;padding-top:.15rem;}',
-      '#neodb-ext-ratings .neodb-ext-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem .55rem;}',
-      '#neodb-ext-ratings .neodb-ext-name{font-weight:600;}',
-      '#neodb-ext-ratings .neodb-ext-mark{display:inline-block;width:.55rem;height:.55rem;border-radius:2px;margin-right:.28rem;vertical-align:.05rem;}',
+      '#neodb-ext-ratings section{margin:0;padding:0;border:0;background:transparent;}',
+      '#neodb-ext-ratings .neodb-ext-head{display:flex;justify-content:space-between;margin-bottom:.1rem;}',
+      '#neodb-ext-ratings .neodb-ext-label{font-size:.7rem;letter-spacing:.04em;color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
+      '#neodb-ext-ratings .neodb-ext-card{padding:.28rem 0;border-top:1px solid var(--pico-muted-border-color,color-mix(in srgb,CanvasText 16%,transparent));}',
+      '#neodb-ext-ratings .neodb-ext-card:first-of-type{border-top:0;padding-top:.05rem;}',
+      '#neodb-ext-ratings .neodb-ext-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:.1rem .4rem;}',
+      '#neodb-ext-ratings .neodb-ext-name{font-weight:600;text-decoration:none;}',
+      '#neodb-ext-ratings a.neodb-ext-name{color:inherit;}',
+      '#neodb-ext-ratings a.neodb-ext-name:hover{text-decoration:underline;text-underline-offset:.12em;}',
+      '#neodb-ext-ratings .neodb-ext-mark{display:inline-block;width:.5rem;height:.5rem;border-radius:2px;margin-right:.25rem;vertical-align:.05rem;}',
       '#neodb-ext-ratings .neodb-ext-mark.douban{background:#319840;}',
       '#neodb-ext-ratings .neodb-ext-mark.bangumi{background:#F09199;}',
-      '#neodb-ext-ratings .neodb-ext-score{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums;}',
+      '#neodb-ext-ratings .neodb-ext-score{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;}',
       '#neodb-ext-ratings .neodb-ext-meta,#neodb-ext-ratings .neodb-ext-title,#neodb-ext-ratings .neodb-ext-user{color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
-      '#neodb-ext-ratings .neodb-ext-title{margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem;}',
+      '#neodb-ext-ratings .neodb-ext-title{margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;}',
       '#neodb-ext-ratings a{color:var(--pico-primary,#2a6fdb);text-decoration:underline;text-underline-offset:.12em;}',
-      '#neodb-ext-ratings ul{list-style:none;margin:.35rem 0 0;padding:0;}',
-      '#neodb-ext-ratings li{margin:.32rem 0 0;}',
-      '#neodb-ext-ratings .neodb-ext-user{margin-right:.35rem;}',
-      '#neodb-ext-ratings .neodb-ext-cmt-score{margin-right:.35rem;font-variant-numeric:tabular-nums;}',
+      '#neodb-ext-ratings details.neodb-ext-fold{margin:.08rem 0 0;padding:0;border:0;background:transparent;}',
+      '#neodb-ext-ratings details.neodb-ext-fold summary{cursor:pointer;list-style:none;padding:0;margin:0;border:0;background:none;',
+      'color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));font-size:.75rem;line-height:1.3;',
+      'display:block;min-height:0;height:auto;}',
+      '#neodb-ext-ratings details.neodb-ext-fold summary::-webkit-details-marker{display:none;}',
+      '#neodb-ext-ratings ul{list-style:none;margin:.3rem 0 0;padding:0;}',
+      '#neodb-ext-ratings li{margin:.28rem 0 0;}',
+      '#neodb-ext-ratings .neodb-ext-user{margin-right:.3rem;}',
+      '#neodb-ext-ratings .neodb-ext-cmt-score{margin-right:.3rem;font-variant-numeric:tabular-nums;}',
       '#neodb-ext-ratings .neodb-ext-text{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}',
-      '#neodb-ext-ratings .neodb-ext-note,#neodb-ext-ratings .neodb-ext-more{margin:.3rem 0 0;font-size:.8rem;color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
+      '#neodb-ext-ratings .neodb-ext-note,#neodb-ext-ratings .neodb-ext-more{margin:.25rem 0 0;font-size:.75rem;color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
     ].join('');
+  }
+
+  function findMountTarget(doc) {
+    doc = doc || document;
+    var rating = doc.querySelector('#item-metadata .rating');
+    if (rating) return { node: rating, where: 'afterend', leftColumn: false };
+    var metadata = doc.getElementById('item-metadata');
+    if (metadata) return { node: metadata, where: 'beforeend', leftColumn: false };
+    var cover = doc.getElementById('item-cover');
+    if (cover) return { node: cover, where: 'afterend', leftColumn: true };
+    return null;
+  }
+
+  function panelIsWellPlaced(el) {
+    if (!el || !el.isConnected) return false;
+    if (el.closest('#item-title') || el.closest('.site-list')) return false;
+    if (el.closest('#item-metadata')) return true;
+    if (el.classList && el.classList.contains('left')) return true;
+    var cover = el.ownerDocument ? el.ownerDocument.getElementById('item-cover') : null;
+    return !!(cover && el.previousElementSibling === cover);
   }
 
   function parseJson(text) {
@@ -611,16 +660,17 @@
 
   function start() {
     if (!isNeoDBItemPage()) return;
-    if (mountedPath === location.pathname && document.getElementById('neodb-ext-ratings')) return;
-    var anchor = document.getElementById('item-title') || document.querySelector('main');
-    if (!anchor) return;
+    var existing = document.getElementById('neodb-ext-ratings');
+    if (mountedPath === location.pathname && panelIsWellPlaced(existing)) return;
+    var target = findMountTarget(document);
+    if (!target) return;
     mountedPath = location.pathname;
-    var previous = document.getElementById('neodb-ext-ratings');
-    if (previous) previous.remove();
+    if (existing) existing.remove();
     ensureStyle();
     var host = document.createElement('div');
     host.id = 'neodb-ext-ratings';
-    anchor.appendChild(host);
+    if (target.leftColumn) host.classList.add('left');
+    target.node.insertAdjacentElement(target.where, host);
     var token = ++runToken;
     var hrefs = urlsFromDocument(document);
     var siteList = document.querySelector('#item-title .site-list, .site-list');
@@ -679,6 +729,8 @@
     loadDouban: loadDouban,
     loadBangumi: loadBangumi,
     panelCss: panelCss,
+    findMountTarget: findMountTarget,
+    panelIsWellPlaced: panelIsWellPlaced,
   };
 
   try {
