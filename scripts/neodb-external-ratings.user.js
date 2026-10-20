@@ -334,7 +334,7 @@
     var score = source.score == null
       ? '<span class="neodb-ext-meta">' + escapeHtml(source.emptyReason || '暂无评分') + '</span>'
       : '<span class="neodb-ext-score">' + escapeHtml(formatScore(source.score)) + '</span>' +
-        '<span class="neodb-ext-meta">/' + escapeHtml(source.max || 10) + '</span>';
+        '<span class="neodb-ext-meta">/ ' + escapeHtml(source.max || 10) + '</span>';
     var count = source.count == null ? '' : '<span class="neodb-ext-meta">' + escapeHtml(formatCount(source.count)) + ' 人</span>';
     var rank = source.rank && source.rank > 0 ? '<span class="neodb-ext-meta">#' + escapeHtml(formatCount(source.rank)) + '</span>' : '';
     return '<section class="neodb-ext-card">' + head + score + count + rank + '</div>' +
@@ -376,12 +376,11 @@
       '#neodb-ext-ratings .neodb-ext-meta,#neodb-ext-ratings .neodb-ext-title,#neodb-ext-ratings .neodb-ext-user{color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));}',
       '#neodb-ext-ratings .neodb-ext-title{margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;}',
       '#neodb-ext-ratings a{color:var(--pico-primary,#2a6fdb);text-decoration:underline;text-underline-offset:.12em;}',
-      '#neodb-ext-ratings details.neodb-ext-fold{margin:.12rem 0 0;padding:0;border:0;background:transparent;}',
-      '#neodb-ext-ratings details.neodb-ext-fold summary{cursor:pointer;list-style:none;padding:0;margin:0;border:0;background:transparent;',
-      'color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));font-size:.75rem;display:inline;}',
+      '#neodb-ext-ratings details.neodb-ext-fold{margin:.08rem 0 0;padding:0;border:0;background:transparent;}',
+      '#neodb-ext-ratings details.neodb-ext-fold summary{cursor:pointer;list-style:none;padding:0;margin:0;border:0;background:none;',
+      'color:var(--pico-muted-color,color-mix(in srgb,CanvasText 62%,transparent));font-size:.75rem;line-height:1.3;',
+      'display:block;min-height:0;height:auto;}',
       '#neodb-ext-ratings details.neodb-ext-fold summary::-webkit-details-marker{display:none;}',
-      '#neodb-ext-ratings details.neodb-ext-fold summary::before{content:"▸ ";}',
-      '#neodb-ext-ratings details.neodb-ext-fold[open] summary::before{content:"▾ ";}',
       '#neodb-ext-ratings ul{list-style:none;margin:.3rem 0 0;padding:0;}',
       '#neodb-ext-ratings li{margin:.28rem 0 0;}',
       '#neodb-ext-ratings .neodb-ext-user{margin-right:.3rem;}',
