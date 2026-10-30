@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         NeoDB 豆瓣与 Bangumi 评分
 // @namespace    https://github.com/viazure/userscripts
-// @version      0.2.0
+// @version      0.2.1
 // @description  在 NeoDB 条目页左侧原生评分下方显示已关联的豆瓣与 Bangumi 评分；短评默认折叠
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=neodb.social
 // @author       viazure
 // @license      MIT
 // @homepageURL  https://github.com/viazure/userscripts
@@ -14,7 +15,7 @@
 // @match        *://eggplant.place/*
 // @match        *://neodb.de/*
 // @match        *://minreol.dk/*
-// @include      /^https?:\/\/[^\/?#]+\/(movie|tv|book|game|music|album|podcast|performance)(?:\/[^\s]*)?(?:[?#][^\s]*)?$/
+// @include      /^https?:\/\/(?:[^\/?#]+\.)?(?:neodb\.social|neodb\.de|eggplant\.place|minreol\.dk)\/(movie|tv|book|game|music|album|podcast|performance)(?:\/[^\s]*)?(?:[?#][^\s]*)?$/
 // @run-at       document-idle
 // @grant        GM_xmlhttpRequest
 // @grant        GM.xmlHttpRequest
@@ -44,7 +45,7 @@
 (function () {
   'use strict';
 
-  var UA = 'viazure-userscripts/0.2.0 (+https://github.com/viazure/userscripts)';
+  var UA = 'viazure-userscripts/0.2.1 (+https://github.com/viazure/userscripts)';
   var BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
   var ITEM_PATH = /^\/(movie|tv|book|game|music|album|podcast|performance)(\/|$)/;
   var COMMENT_LIMIT = 3;
